@@ -1,0 +1,47 @@
+name: Exercise B EDA on Kaggle
+run-name: Exercise B EDA (${{ inputs.scope || 'all' }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: All runs S01 first, then all 22 subjects if successful
+        type: choice
+        options: [all, smoke]
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db7-kaggle-experiments
+  cancel-in-progress: false
+
+jobs:
+  eda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Kaggle CLI
+        run: python -m pip install kaggle==2.2.4
+      - name: Run S01 preflight, then requested EDA
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+          EDA_SCOPE: ${{ inputs.scope || 'all' }}
+        run: python scripts/run_exercise_b_eda.py
+      - name: Collect results and exact submitted notebook
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: db7-exercise-b-eda-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            eda_results/
+            eda_submitted/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: warn
