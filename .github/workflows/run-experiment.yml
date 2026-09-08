@@ -1,0 +1,52 @@
+name: Run DB7 on Kaggle
+run-name: DB7 ${{ inputs.scope || 'smoke' }} seeds ${{ inputs.seeds || '42' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Subjects to run
+        type: choice
+        options: [smoke, all]
+        default: smoke
+      seeds:
+        description: Model seeds, comma separated (split seed stays 42)
+        type: string
+        default: '42'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db7-kaggle-experiments
+  cancel-in-progress: false
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Kaggle client
+        run: python -m pip install -r requirements.txt
+      - name: Launch, monitor and collect
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+          EXPERIMENT_SCOPE: ${{ inputs.scope || 'smoke' }}
+          MODEL_SEEDS: ${{ inputs.seeds || '42' }}
+        run: python scripts/run_experiment.py
+      - name: Save results and submission records
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: db7-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            results/
+            submitted/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
