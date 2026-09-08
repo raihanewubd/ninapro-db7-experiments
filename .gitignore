@@ -1,0 +1,8 @@
+kaggle.json
+access_token
+.env
+.venv/
+__pycache__/
+results/
+submitted/
+build/

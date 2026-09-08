@@ -1,0 +1,6 @@
+{
+  "notebook": "notebooks/mka-db7-amplitude-velocity.ipynb",
+  "dataset_sources": ["rayaanraza1/ninapro-db7"],
+  "accelerator": "NvidiaTeslaT4",
+  "max_minutes_per_seed": 100
+}
