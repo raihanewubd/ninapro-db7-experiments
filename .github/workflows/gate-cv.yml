@@ -1,0 +1,47 @@
+name: Exercise B gate and subject CV on Kaggle
+run-name: Exercise B gate and subject CV (${{ inputs.scope || 'all' }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: All runs a short three-subject preflight first, then all 22 subjects if successful
+        type: choice
+        options: [all, smoke]
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db7-kaggle-experiments
+  cancel-in-progress: false
+
+jobs:
+  eda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install Kaggle CLI
+        run: python -m pip install kaggle==2.2.4
+      - name: Run preflight, then 22 subjects and five held-out-subject folds
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+          GATE_CV_SCOPE: ${{ inputs.scope || 'all' }}
+        run: python scripts/run_gate_cv.py
+      - name: Collect results and exact submitted notebook
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: db7-gate-cv-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            gate_cv_results/
+            gate_cv_submitted/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: warn
