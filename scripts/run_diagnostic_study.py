@@ -44,7 +44,8 @@ def prepare(job):
         if cell['cell_type'] == 'code':
             ast.parse(''.join(cell['source']))
     write_json(folder/'experiment.ipynb', notebook)
-    write_json(folder/'kernel-metadata.json', dict(id=reference,title=f'DB7 Diagnostics {run_id} {attempt} {job}',
+    # Kaggle derives a new kernel's slug from its title. Keep title and id identical.
+    write_json(folder/'kernel-metadata.json', dict(id=reference,title=f'DB7 Diag {run_id} {attempt} {job}',
         code_file='experiment.ipynb', language='python',kernel_type='notebook',is_private=True,
         enable_gpu=True, enable_internet=False, machine_shape='NvidiaTeslaT4',
         dataset_sources=['rayaanraza1/ninapro-db7'],kernel_sources=[],competition_sources=[],model_sources=[]))
