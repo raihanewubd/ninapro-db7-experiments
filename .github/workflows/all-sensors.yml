@@ -1,0 +1,94 @@
+name: DB7 all four sensors and cohort comparison
+run-name: DB7 all sensors (${{ inputs.scope }})
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: All four sensors after GPU preflight
+        type: choice
+        options: [all, smoke]
+        default: all
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: db7-kaggle-experiments
+  cancel-in-progress: false
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install kaggle==2.2.4
+      - name: Check 120-channel model on S1 for two epochs
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+          MODALITY_JOB: smoke
+        run: python scripts/run_all_sensors.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: db7-modalities-${{ github.run_id }}-${{ github.run_attempt }}-smoke
+          path: |
+            modality_results/
+            modality_submitted/
+          retention-days: 14
+          compression-level: 0
+  full:
+    needs: preflight
+    if: inputs.scope == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        arm: [all_sensors]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install kaggle==2.2.4
+      - name: Train and collect 22 subjects
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+          MODALITY_JOB: ${{ matrix.arm }}
+        run: python scripts/run_all_sensors.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: db7-modalities-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.arm }}
+          path: |
+            modality_results/
+            modality_submitted/
+          retention-days: 14
+          compression-level: 0
+  compare:
+    needs: full
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install pandas numpy matplotlib tabulate
+      - name: Compare all eight inputs by subject group
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXTRA_RUN_ID: ${{ github.run_id }}
+          EXTRA_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: python scripts/analyze_eight_modalities.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: db7-eight-modalities-cohort-analysis
+          path: modality_analysis/
+          retention-days: 14
