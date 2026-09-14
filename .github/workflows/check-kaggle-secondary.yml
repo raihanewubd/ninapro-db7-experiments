@@ -1,0 +1,36 @@
+name: Check secondary Kaggle credentials
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Authenticate to Kaggle without launching a notebook
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.request, urllib.error
+          token = os.environ.get('KAGGLE_API_TOKEN', '').strip()
+          username = os.environ.get('KAGGLE_USERNAME', '').strip()
+          if not token or not username:
+              raise SystemExit('FAIL: secondary token or username is missing')
+          url = 'https://api.kaggle.com/v1/kernels.KernelsApiService/GetAcceleratorQuotaStatistics'
+          req = urllib.request.Request(url, data=b'{}', headers={'Authorization': 'Bearer '+token, 'Content-Type': 'application/json'})
+          try:
+              with urllib.request.urlopen(req, timeout=45) as response:
+                  result = json.load(response)
+          except urllib.error.HTTPError as e:
+              raise SystemExit('FAIL: Kaggle authentication/quota API HTTP '+str(e.code)) from None
+          if 'error' in result:
+              raise SystemExit('FAIL: Kaggle returned an API error')
+          print('PASS: secondary secret available and authenticated quota request accepted.')
+          print('Configured username:', username)
+          print('No notebook launched; no GPU runtime consumed.')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('Secondary token authentication passed. Configured username: '+username+'\n\nRead-only quota request; no experiment launched. Username ownership and dataset permissions were not independently verified.\n')
+          PY
