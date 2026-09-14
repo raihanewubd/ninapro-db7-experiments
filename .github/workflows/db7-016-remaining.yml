@@ -1,0 +1,31 @@
+name: DB7-016 remaining fits on secondary Kaggle
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: db7-016-remaining
+  cancel-in-progress: false
+jobs:
+  continue-ablation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install official Kaggle CLI
+        run: python -m pip install --quiet kaggle
+      - name: Verify access, submit 64 fits, and retrieve results
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+          PYTHONUNBUFFERED: "1"
+        run: python run_db7_016_remaining.py
+      - name: Preserve continuation outputs and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db7-016-remaining-${{ github.run_id }}
+          path: |
+            continuation_results/
+            submission/kernel-metadata.json
+          retention-days: 30
