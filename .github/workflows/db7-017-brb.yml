@@ -1,0 +1,54 @@
+name: DB7-017 BRB pilot
+run-name: DB7-017 S1-S15 seed42 (${{ inputs.monitor_ref == '' && 'submit' || 'monitor existing' }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Authorized pilot only; S1/S15, seed42, 34 neural fits
+        required: true
+        type: choice
+        options: [pilot]
+        default: pilot
+      monitor_ref:
+        description: Existing beautifulminnd/db7-017-brb-pilot-RUNID-ATTEMPT (blank submits once)
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db7-kaggle-secondary
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install official Kaggle client
+        run: python -m pip install kaggle==2.2.4
+      - name: Submit once or monitor existing, then verify outputs
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+          KAGGLE_MONITOR_REF: ${{ inputs.monitor_ref }}
+        run: python run_db7_017_brb.py
+      - name: Save notebook provenance, execution logs and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db7-017-brb-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            brb_results/
+            brb_submitted/
+            db7-017-manifest.json
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0
