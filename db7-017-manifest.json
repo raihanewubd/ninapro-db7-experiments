@@ -1,0 +1,22 @@
+{
+  "experiment_id": "DB7-017",
+  "subjects": [
+    1,
+    15
+  ],
+  "seeds": [
+    42
+  ],
+  "epochs": 13,
+  "neural_fits": 34,
+  "notebook_sha256": "34fb67d3027254739508f9cc7cde156fd5c94a076013b2921c83f02341db558a",
+  "source_sha256": {
+    "three_branch_model.py": "d3cc70879dd84abead54cde20da12fe5ef772f572c346c1fa45f550d639c4c7d",
+    "ablation_model.py": "e81fefd8f27ffd9de5a2f7c5130bd1bd2e7a5e31671d047b53eb7bf9a370cbbd",
+    "tc_support.py": "029c19915166759a5605d6a5a236290bce7599928df3e8b7fdbf48aa3d9dda17",
+    "brb_meta.py": "22d1b57d0f2f8eecbd0abe02c2667d277bdb531b48993a7d77ce5d301a173854",
+    "brb_worker.py": "a1235da080108a5e71572037cca6d79ae08b02f60c1105a35713101ddf4bfb16",
+    "brb_launch.py": "d65093ad8bcb5912f517b4e1f7ec27792a855583573bd972330c806569328ab3"
+  },
+  "protocol_sha256": "7f20b0e28797cb4a57b48c9dd086812fbbbbd1d517cd3903a084b8b9455c6a20"
+}
