@@ -29,7 +29,7 @@
   ],
   "epochs": 13,
   "neural_fits": 374,
-  "notebook_sha256": "bcb5e07b7effdbc8deda8e8cab026d568f525fb511544e48f217fd626f462f0a",
+  "notebook_sha256": "9b776976ad57e8e6a6d47d5df147deb2a2f8d3b0bf78cf37f59d13e3524cd1f9",
   "source_sha256": {
     "three_branch_model.py": "d3cc70879dd84abead54cde20da12fe5ef772f572c346c1fa45f550d639c4c7d",
     "ablation_model.py": "e81fefd8f27ffd9de5a2f7c5130bd1bd2e7a5e31671d047b53eb7bf9a370cbbd",
@@ -37,7 +37,7 @@
     "brb_meta.py": "1f65157e1e2b87b995182bba41972b3b5b7bbd68907eaf3eea91aca55681d822",
     "brb_worker.py": "a1235da080108a5e71572037cca6d79ae08b02f60c1105a35713101ddf4bfb16",
     "brb_evaluate.py": "667c7f0a8b5e651709416cf8345aeb87be7f9252f2fbb27f41620700bae993c6",
-    "brb_launch.py": "32b279adf6ef33166e8d725c202422b3dc145bba292eff5e8ec68e1977e9de41"
+    "brb_launch.py": "e43449a0e2eaf25ead230933f18160540939063546aebcdf33e26b2921567176"
   },
   "protocol_sha256": "5eab94cabda2a5a55fad9ad1184e389d32962da0c2511d615a397357e1a54660"
 }

@@ -1,4 +1,4 @@
-"""Submit one DB7-018 pilot, or monitor an existing Kaggle run without a push.
+"""Submit one DB7-018 study, or monitor an existing Kaggle run without a push.
 
 GitHub Actions supplies authentication. This standard-library runner validates
 the packaged notebook, checks access/quota, and records a push attempt before
@@ -159,14 +159,14 @@ def parse_push_url(output):
 
 def prepare(root, output):
     require(os.environ.get("KAGGLE_USERNAME", "").strip() == ACCOUNT,
-            "This pilot is authorized for the beautifulminnd secondary account")
+            "This study is authorized for the beautifulminnd secondary account")
     notebook = root / NOTEBOOK
     manifest = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
     digest = sha256(notebook)
     require(manifest.get("notebook_sha256") == digest, "Notebook SHA-256 differs from the packaged manifest")
     require(manifest.get("experiment_id") == EXPERIMENT, "Manifest experiment ID differs")
     require(manifest.get("subjects") == SUBJECTS and manifest.get("seeds") == SEEDS,
-            "Only the authorized S1-S22, seed 42 pilot may be submitted")
+            "Only the authorized S1-S22, seed 42 study may be submitted")
     require(manifest.get("neural_fits") == EXPECTED_FITS and manifest.get("epochs") == EPOCHS,
             "Manifest must declare 374 neural fits and 13 full epochs")
     run_id, attempt = os.environ.get("GITHUB_RUN_ID", ""), os.environ.get("GITHUB_RUN_ATTEMPT", "")
@@ -220,14 +220,14 @@ def validate_archive(path, expected_manifest=None):
         require(completion.get("experiment_id") == EXPERIMENT and completion.get("success") is True,
                 "Notebook did not certify successful DB7-018 completion")
         require(completion.get("subjects") == SUBJECTS and completion.get("seeds") == SEEDS,
-                "Completion scope differs from the authorized pilot")
+                "Completion scope differs from the authorized study")
         require(completion.get("neural_fits") == EXPECTED_FITS and completion.get("meta_completed") == len(SUBJECTS),
                 "Expected 374 full fits and two completed subject meta-analyses")
         protocol = read_json("run_manifest.json")
         require(protocol.get("experiment_id") == EXPERIMENT and protocol.get("subjects") == SUBJECTS
                 and protocol.get("seeds") == SEEDS and protocol.get("epochs") == EPOCHS
                 and protocol.get("smoke") is False,
-                "Runtime manifest does not describe the full authorized pilot")
+                "Runtime manifest does not describe the full authorized study")
         require(protocol.get("window_samples") == 400 and protocol.get("stride_samples") == 20
                 and protocol.get("fs") == 2000
                 and protocol.get("train_repetitions") == [1, 3, 4, 6]
@@ -277,7 +277,7 @@ def validate_archive(path, expected_manifest=None):
                     f"History does not contain exactly epochs 1–13: {history_name}")
         expected = {(s, "oof", rep, arm) for s in SUBJECTS for rep in (1, 3, 4, 6) for arm in ("W", "S", "I")}
         expected |= {(s, "final", None, arm) for s in SUBJECTS for arm in ("W", "S", "I", "SI", "WSI")}
-        require(identities == expected, "Full fit identities do not match the 24 OOF + 10 final pilot design")
+        require(identities == expected, "Full fit identities do not match the 264 OOF + 110 final study design")
         meta = [read_json(name) for name in names if name.startswith("full/") and name.endswith("/meta_completion.json")]
         require(len(meta) == len(SUBJECTS) and {item.get("subject") for item in meta} == set(SUBJECTS)
                 and all(item.get("success") is True and item.get("seed") == 42 for item in meta),
@@ -334,7 +334,7 @@ def run(root, monitor_ref="", prepare_only=False):
         require(not state_path.exists(), "This folder already records a launch attempt; use its reference with monitor_ref")
         submission, reference, provenance = prepare(root, output)
         if prepare_only:
-            print("Prepared and hash-checked the pilot; no network request or submission.", flush=True)
+            print("Prepared and hash-checked the study; no network request or submission.", flush=True)
             return
         check_access_and_quota(output)
         state = dict(provenance, state="push_attempted", new_submission=True,
@@ -361,7 +361,7 @@ def run(root, monitor_ref="", prepare_only=False):
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as stream:
-            stream.write(f"DB7-018 pilot: {state['url']}\n\nS1-S22, seed 42; 374 full fits; both T4 GPUs required by notebook preflight.\n")
+            stream.write(f"DB7-018 study: {state['url']}\n\nS1-S22, seed 42; 374 full fits; both T4 GPUs required by notebook preflight.\n")
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a") as handle:
             handle.write("reference=" + reference + "\n")
