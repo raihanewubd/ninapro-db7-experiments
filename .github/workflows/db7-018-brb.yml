@@ -1,0 +1,91 @@
+name: DB7-018 full BRB
+run-name: DB7-018 all22 seed42
+on:
+  workflow_dispatch:
+    inputs:
+      monitor_ref:
+        description: Existing Kaggle reference; blank submits once
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: db7-kaggle-secondary
+  cancel-in-progress: false
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      reference: ${{ steps.launch.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install kaggle==2.2.4
+      - id: launch
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+          KAGGLE_MONITOR_REF: ${{ inputs.monitor_ref }}
+          DB7_SUBMIT_ONLY: '1'
+        run: python run_db7_018_brb.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-018-launch-${{ github.run_id }}
+          path: |
+            brb_results/
+            brb_submitted/
+          retention-days: 30
+  monitor_first:
+    needs: submit
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    outputs:
+      complete: ${{ steps.monitor.outputs.complete }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install kaggle==2.2.4
+      - id: monitor
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+          KAGGLE_MONITOR_REF: ${{ needs.submit.outputs.reference }}
+          DB7_PENDING_OK: '1'
+        run: python run_db7_018_brb.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-018-first-${{ github.run_id }}
+          path: brb_results/
+          retention-days: 30
+          compression-level: 0
+  monitor_final:
+    needs: [submit, monitor_first]
+    if: ${{ always() && needs.submit.result == 'success' && needs.monitor_first.outputs.complete != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install kaggle==2.2.4
+      - env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+          KAGGLE_MONITOR_REF: ${{ needs.submit.outputs.reference }}
+        run: python run_db7_018_brb.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-018-final-${{ github.run_id }}
+          path: brb_results/
+          retention-days: 30
+          compression-level: 0
