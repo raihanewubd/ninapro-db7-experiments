@@ -1,0 +1,50 @@
+name: DB7-018 compact analysis bundle
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: db7-018-final-34917705725
+          run-id: 34917705725
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded
+      - name: Extract verified evaluation tables
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile,json,hashlib,shutil
+          root=Path('downloaded'); out=Path('compact');out.mkdir()
+          for p in root.rglob('verification.json'):
+              shutil.copy2(p,out/'workflow_verification.json')
+          archives=list(root.rglob('db7_brb_full_*.zip'))
+          assert len(archives)==1,archives
+          zpath=archives[0]
+          h=hashlib.sha256()
+          with zpath.open('rb') as f:
+              for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+          with zipfile.ZipFile(zpath) as z:
+              assert z.testzip() is None
+              for n in z.namelist():
+                  p=Path(n)
+                  if 'smoke' in p.parts:continue
+                  keep=('evaluation' in p.parts and p.suffix in ('.csv','.json','.png')) or p.name in ['all_subject_metrics.csv','RESULTS.md','completion.json','preflight.json','run_manifest.json','meta_rule_initial.csv','meta_rule_conclusions.csv','meta_model.json','meta_completion.json','per_gesture_errors.csv','per_repetition_errors.csv','method_metrics.csv','meta_rule_support.csv']
+                  if keep:
+                      dest=(out/'results'/n).resolve()
+                      assert dest.is_relative_to((out/'results').resolve())
+                      dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(z.read(n))
+          (out/'archive_verification.json').write_text(json.dumps(dict(sha256=h.hexdigest(),bytes=zpath.stat().st_size,crc='passed'),indent=2))
+          for p in out.rglob('method_summary.csv'):print(p.read_text())
+          for p in out.rglob('significance_subject_cluster.csv'):print(p.read_text())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db7-018-compact-analysis
+          path: compact/
+          retention-days: 30
