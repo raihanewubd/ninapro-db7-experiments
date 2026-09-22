@@ -1,0 +1,36 @@
+{
+  "experiment_id": "DB7-021",
+  "notebook_sha256": "048230495d63ade657901612e6baf34634050f7196601e7ae0b6b6baf1320d73",
+  "source_kernel": "beautifulminnd/db7-018-brb-full-34917705725-1",
+  "source_archive_sha256": "65cf7bf7b914e0eb2f4178e96cffc74d27b6d42dacd694a6eaac42c4aec54eb0",
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22
+  ],
+  "neural_fits": 0,
+  "source_sha256": {
+    "brb_meta.py": "91d93df080bd3b94ff88e5a71acd5795307e324a9aeb668d883c2d47768c42eb",
+    "taskaware_core.py": "ae28207b47de504206e412a12290ed58591cd77434af2e05ad32d84e7fd0dac1",
+    "taskaware_study.py": "a2060d2e4831d953b6f92c5f390f59ab2b09b37ae0a6d3a2924e2989b6cdc859"
+  }
+}
