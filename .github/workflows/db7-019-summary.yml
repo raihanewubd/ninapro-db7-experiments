@@ -1,0 +1,35 @@
+name: DB7-019 audit summary
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: db7-019-recovery-35753442105
+          run-id: 35753442105
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile,json
+          out=Path('compact');out.mkdir()
+          archive=next(Path('downloaded').rglob('db7_019_recovery_audit.zip'))
+          with zipfile.ZipFile(archive) as z:
+              assert z.testzip() is None
+              for n in z.namelist():
+                  if '/' not in n and not n.endswith('.gz'):
+                      (out/n).write_bytes(z.read(n))
+              print(z.read('REPORT.md').decode())
+              print(z.read('oracle_recovery.csv').decode())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db7-019-summary
+          path: compact/
