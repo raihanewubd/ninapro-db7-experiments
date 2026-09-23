@@ -1,0 +1,80 @@
+{
+  "experiments": [
+    {
+      "stage": 1,
+      "experiment_id": "DB7-022",
+      "notebook": "db7-022-matched-checkpoints.ipynb",
+      "sha256": "1c42006bce12f3331bf5d7d972cbd5f9a395e196ec17a9f00b607ffa9507d43c",
+      "gpu_count": 2,
+      "neural_fits": 0,
+      "question": "Does BRB help when calibration and test use exactly the same neural model?"
+    },
+    {
+      "stage": 2,
+      "experiment_id": "DB7-023",
+      "notebook": "db7-023-directional-inputs.ipynb",
+      "sha256": "b8759bd5e91029acfc044d4a8bf9ce1640745ffb18456023772b1ec566f32d84",
+      "gpu_count": 0,
+      "neural_fits": 0,
+      "question": "Do candidate-specific margins and class distances outperform generic reliability indicators?"
+    },
+    {
+      "stage": 3,
+      "experiment_id": "DB7-024",
+      "notebook": "db7-024-recovery-consequents.ipynb",
+      "sha256": "b1bb294b78005ab5aa534697afa9a4d9897277c01aafbfbcfeccf75a3d5cfda0",
+      "gpu_count": 0,
+      "neural_fits": 0,
+      "question": "Does learning recovery versus harm make better switching decisions?"
+    },
+    {
+      "stage": 4,
+      "experiment_id": "DB7-025",
+      "notebook": "db7-025-reference-capacity.ipynb",
+      "sha256": "078d17771e41b0c1c4990dd9ec9614db79c386d56debd2fc4dec030cce36f29b",
+      "gpu_count": 0,
+      "neural_fits": 0,
+      "question": "Does finer reference resolution improve development accuracy?"
+    },
+    {
+      "stage": 5,
+      "experiment_id": "DB7-026",
+      "notebook": "db7-026-causal-history.ipynb",
+      "sha256": "05a9f5b52622ba70dbc42e066739e638337ab8f62fc436b018b6332ad0fb98c7",
+      "gpu_count": 0,
+      "neural_fits": 0,
+      "question": "Can past predictions identify when intervention is useful?"
+    },
+    {
+      "stage": 6,
+      "experiment_id": "DB7-027",
+      "notebook": "db7-027-mechanism-controls.ipynb",
+      "sha256": "8179f18ab532f9fc4f77dca07846b08b933b97887c5c4245b3ec67bdc2f6e3fc",
+      "gpu_count": 0,
+      "neural_fits": 0,
+      "question": "Does learned ER weighting beat simpler matched controls?"
+    },
+    {
+      "stage": 7,
+      "experiment_id": "DB7-028",
+      "notebook": "db7-028-seed-robustness.ipynb",
+      "sha256": "140cf078b0a3d99735fd171958dfc96a9f5c64c85a52126e4344536ae1f91c1f",
+      "gpu_count": 2,
+      "neural_fits": 132,
+      "question": "Does the locked design behave consistently across neural seeds?"
+    }
+  ],
+  "source_kernel": "beautifulminnd/db7-018-brb-full-34917705725-1",
+  "source_archive_sha256": "65cf7bf7b914e0eb2f4178e96cffc74d27b6d42dacd694a6eaac42c4aec54eb0",
+  "source_sha256": {
+    "three_branch_model.py": "bfec128ef3549464b2bfc16aedc3b1afd34b9f6e02165458e67d43c35f9d8bcd",
+    "ablation_model.py": "56d1120b22a511ffbe33fefde43331d297e08738bac6237f775071eac4451fac",
+    "tc_support.py": "6bca780060bfdbe050412ca87fa5077f4a2e17ed00e9e6e6f076f3f7334aa7c4",
+    "brb_worker.py": "a1235da080108a5e71572037cca6d79ae08b02f60c1105a35713101ddf4bfb16",
+    "brb_meta.py": "91d93df080bd3b94ff88e5a71acd5795307e324a9aeb668d883c2d47768c42eb",
+    "rule_core.py": "9b69a2f90f60a3aa5f35c3b28bc8678f567c89f6fc94bfd107050ed36a7f679a",
+    "suite_neural.py": "f1989be0dcece91ea80f44158075a2f5f33cf85c15d9e8d3ec33a86a1f91d928",
+    "suite_study.py": "9cc4ac4eb270321446f5f06cc18eabfbc1fdfcaee6d62b2f9a7e4a4f678ebeba",
+    "test_suite.py": "78b6791f368357de855b448f187fca4ba8166c9c88b0a3f7814122479b27364a"
+  }
+}
