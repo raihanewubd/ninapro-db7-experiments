@@ -1,0 +1,190 @@
+name: DB7 seven controlled BRB experiments
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: db7-seven-brb-studies
+  cancel-in-progress: false
+jobs:
+  stage1:
+    name: DB7-022 matched-checkpoints
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      reference: ${{ steps.run.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kaggle==2.2.4
+      - name: Run and verify Kaggle stage
+        id: run
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: python run_db7_suite.py --stage 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-022-results
+          path: suite_results/
+          retention-days: 30
+          compression-level: 0
+  stage2:
+    name: DB7-023 directional-inputs
+    needs: [stage1]
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      reference: ${{ steps.run.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kaggle==2.2.4
+      - name: Run and verify Kaggle stage
+        id: run
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: python run_db7_suite.py --stage 2 --cache-ref "${{ needs.stage1.outputs.reference }}" --previous-ref "${{ needs.stage1.outputs.reference }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-023-results
+          path: suite_results/
+          retention-days: 30
+          compression-level: 0
+  stage3:
+    name: DB7-024 recovery-consequents
+    needs: [stage1, stage2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      reference: ${{ steps.run.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kaggle==2.2.4
+      - name: Run and verify Kaggle stage
+        id: run
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: python run_db7_suite.py --stage 3 --cache-ref "${{ needs.stage1.outputs.reference }}" --previous-ref "${{ needs.stage2.outputs.reference }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-024-results
+          path: suite_results/
+          retention-days: 30
+          compression-level: 0
+  stage4:
+    name: DB7-025 reference-capacity
+    needs: [stage1, stage3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      reference: ${{ steps.run.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kaggle==2.2.4
+      - name: Run and verify Kaggle stage
+        id: run
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: python run_db7_suite.py --stage 4 --cache-ref "${{ needs.stage1.outputs.reference }}" --previous-ref "${{ needs.stage3.outputs.reference }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-025-results
+          path: suite_results/
+          retention-days: 30
+          compression-level: 0
+  stage5:
+    name: DB7-026 causal-history
+    needs: [stage1, stage4]
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      reference: ${{ steps.run.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kaggle==2.2.4
+      - name: Run and verify Kaggle stage
+        id: run
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: python run_db7_suite.py --stage 5 --cache-ref "${{ needs.stage1.outputs.reference }}" --previous-ref "${{ needs.stage4.outputs.reference }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-026-results
+          path: suite_results/
+          retention-days: 30
+          compression-level: 0
+  stage6:
+    name: DB7-027 mechanism-controls
+    needs: [stage1, stage5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      reference: ${{ steps.run.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kaggle==2.2.4
+      - name: Run and verify Kaggle stage
+        id: run
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: python run_db7_suite.py --stage 6 --cache-ref "${{ needs.stage1.outputs.reference }}" --previous-ref "${{ needs.stage5.outputs.reference }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-027-results
+          path: suite_results/
+          retention-days: 30
+          compression-level: 0
+  stage7:
+    name: DB7-028 seed-robustness
+    needs: [stage1, stage6]
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      reference: ${{ steps.run.outputs.reference }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install kaggle==2.2.4
+      - name: Run and verify Kaggle stage
+        id: run
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+        run: python run_db7_suite.py --stage 7 --cache-ref "${{ needs.stage1.outputs.reference }}" --previous-ref "${{ needs.stage6.outputs.reference }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-028-results
+          path: suite_results/
+          retention-days: 30
+          compression-level: 0
