@@ -8,6 +8,11 @@ on:
         required: false
         default: ''
         type: string
+      dataset_ref:
+        description: Existing private trace dataset to reuse after a failed notebook
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -31,6 +36,7 @@ jobs:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
           KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
           KAGGLE_MONITOR_REF: ${{ inputs.monitor_ref }}
+          KAGGLE_EXISTING_DATASET_REF: ${{ inputs.dataset_ref }}
         run: python run_db7_030_hudgins.py
       - uses: actions/upload-artifact@v4
         if: always()
