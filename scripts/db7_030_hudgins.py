@@ -73,8 +73,10 @@ def load_subject(root: Path, subject: int):
     return runs, {"file": str(candidates[0]), "raw_emg_sha256": digest}
 
 
-def threshold_scale(runs):
-    train_signal = np.concatenate([np.abs(x) for _, r, _, x in runs if r in TRAIN_REPS])
+def threshold_scale(runs, fitting_repetitions=TRAIN_REPS):
+    """Estimate channel amplitudes using only the repetitions used for fitting."""
+    train_signal = np.concatenate([np.abs(x) for _, r, _, x in runs
+                                   if r in fitting_repetitions])
     return np.maximum(np.percentile(train_signal, 95, axis=0), 1e-12)
 
 
@@ -140,33 +142,86 @@ def predict(model, x):
     return prob.argmax(axis=1).astype(np.int16) + 1, prob
 
 
-def cv_score(x, frame, mask):
+def cv_score(fold_features, frame, mask):
+    """Each fold has features extracted with its own fitting-only threshold."""
     y = frame.gesture.to_numpy(int)
     rep = frame.native_repetition.to_numpy(int)
     ix = columns(mask)
     scores = []
     for held in TRAIN_REPS:
         train, val = rep != held, rep == held
+        x = fold_features[held]
         pred, _ = predict(fit_lda(x[train][:, ix], y[train]), x[val][:, ix])
         scores.append(float(np.mean(pred == y[val])))
     return float(np.mean(scores))
 
 
+def check_trace_coverage(subject_trace, test_meta, subject):
+    """Require exactly one prediction per raw test window for each saved seed."""
+    if set(subject_trace.seed.unique()) != {42, 43, 44}:
+        raise AssertionError(f"S{subject}: expected exactly seeds 42, 43 and 44")
+    expected = pd.MultiIndex.from_frame(test_meta[KEY])
+    for seed, group in subject_trace.groupby("seed"):
+        actual = pd.MultiIndex.from_frame(group[KEY])
+        if actual.has_duplicates or len(actual) != len(expected):
+            raise AssertionError(f"S{subject} seed {seed}: duplicate/missing test windows")
+        if len(expected.difference(actual)) or len(actual.difference(expected)):
+            raise AssertionError(f"S{subject} seed {seed}: raw and saved test keys differ")
+
+
+def subset_complementarity(joined, prediction, margin):
+    """Count useful TD4 evidence and harmful switches for one subject and seed."""
+    truth = joined.gesture.to_numpy(int)
+    si = joined.si_pred.to_numpy(int)
+    inertial = joined.i_pred.to_numpy(int)
+    si_correct, i_correct = si == truth, inertial == truth
+    good = prediction == truth
+    shared = ~si_correct & ~i_correct
+    recovery, harm = ~si_correct & i_correct, si_correct & ~i_correct
+    switch = (si != inertial) & (margin > 0)
+    recovered, harmed = int((switch & recovery).sum()), int((switch & harm).sum())
+    return dict(windows=len(truth), td_correct=int(good.sum()),
+        td_accuracy=float(good.mean()), si_correct=int(si_correct.sum()),
+        si_accuracy=float(si_correct.mean()), shared_wrong=int(shared.sum()),
+        shared_recovered=int((shared & good).sum()),
+        si_wrong_td_correct=int((~si_correct & good).sum()),
+        si_correct_td_wrong=int((si_correct & ~good).sum()),
+        recovery_opportunities=int(recovery.sum()), harm_opportunities=int(harm.sum()),
+        td_correct_on_recovery=int((recovery & good).sum()),
+        td_correct_on_harm=int((harm & good).sum()),
+        switches=int(switch.sum()), switch_recovered=recovered, switch_harmed=harmed,
+        switch_net_corrected=recovered - harmed,
+        switch_accuracy=float((si_correct.sum() + recovered - harmed) / len(truth)),
+        si_i_td_oracle_correct=int((si_correct | i_correct | good).sum()))
+
+
 def subject_study(root, subject, trace, out):
     runs, source = load_subject(root, subject)
     scale = threshold_scale(runs)
+    # A validation repetition must not affect the ZC/SSC amplitude thresholds.
+    fold_scales = {held: threshold_scale(runs, tuple(r for r in TRAIN_REPS if r != held))
+                   for held in TRAIN_REPS}
     threshold_cv = []
     training = {}
+    cv_features = {}
     for ratio in THRESHOLD_RATIOS:
         x, meta = extract(runs, subject, "train", scale * ratio)
         training[ratio] = x
-        score = cv_score(x, meta, 15)
+        cv_features[ratio] = {}
+        for held in TRAIN_REPS:
+            fold_x, fold_meta = extract(runs, subject, "train", fold_scales[held] * ratio)
+            if not fold_meta.equals(meta):
+                raise AssertionError("Fold feature windows changed with the noise threshold")
+            cv_features[ratio][held] = fold_x
+        score = cv_score(cv_features[ratio], meta, 15)
         threshold_cv.append(dict(subject=subject, ratio=ratio, td4_cv_accuracy=score))
     selected_ratio = sorted(THRESHOLD_RATIOS,
                             key=lambda v: (-next(r["td4_cv_accuracy"] for r in threshold_cv if r["ratio"] == v),
                                            abs(v - 0.01)))[0]
     x_train = training[selected_ratio]
+    selected_cv_features = cv_features[selected_ratio]
     del training
+    del cv_features
     x_test, test_meta = extract(runs, subject, "test", scale * selected_ratio)
     y_train = meta.gesture.to_numpy(int)
     y_test = test_meta.gesture.to_numpy(int)
@@ -174,7 +229,8 @@ def subject_study(root, subject, trace, out):
     for mask in range(1, 16):
         subset_cv.append(dict(subject=subject, mask=mask,
                               families="+".join(FAMILIES[i] for i in range(4) if mask & (1 << i)),
-                              cv_accuracy=cv_score(x_train, meta, mask)))
+                              cv_accuracy=cv_score(selected_cv_features, meta, mask)))
+    del selected_cv_features
     chosen = sorted(subset_cv, key=lambda r: (-r["cv_accuracy"], int(r["mask"]).bit_count(), r["mask"]))[0]["mask"]
     test_rows, predictions = [], {}
     for row in subset_cv:
@@ -187,12 +243,27 @@ def subject_study(root, subject, trace, out):
                           "cv_selected": mask == chosen, "td4_full": mask == 15,
                           "selected_threshold_ratio": selected_ratio})
     subject_trace = trace[trace.subject == subject].copy()
+    check_trace_coverage(subject_trace, test_meta, subject)
     joined = subject_trace.merge(test_meta.assign(feature_row=np.arange(len(test_meta))),
                                  on=KEY, how="left", validate="many_to_one")
     if joined.feature_row.isna().any() or len(joined) != len(subject_trace):
         raise AssertionError(f"S{subject}: saved neural/test feature window mismatch")
     if not np.array_equal(joined.gesture.to_numpy(), y_test[joined.feature_row.to_numpy(int)]):
         raise AssertionError("Label mismatch after joining predictions")
+    combination_rows = []
+    indices = joined.feature_row.to_numpy(int)
+    si, inertial = joined.si_pred.to_numpy(int), joined.i_pred.to_numpy(int)
+    for row in subset_cv:
+        mask = row["mask"]
+        pred, prob = predictions[mask]
+        aligned_pred = pred[indices]
+        margin = prob[indices, inertial - 1] - prob[indices, si - 1]
+        for seed, positions in joined.groupby("seed").indices.items():
+            positions = np.asarray(positions)
+            combination_rows.append(dict(subject=subject, seed=int(seed), mask=mask,
+                families=row["families"], cv_selected=mask == chosen,
+                **subset_complementarity(joined.iloc[positions], aligned_pred[positions],
+                                         margin[positions])))
     for name, mask in (("selected", chosen), ("TD4", 15)):
         pred, prob = predictions[mask]
         indices = joined.feature_row.to_numpy(int)
@@ -206,10 +277,12 @@ def subject_study(root, subject, trace, out):
     joined.drop(columns="feature_row").to_csv(out / f"S{subject:02}_window_predictions.csv.gz", index=False)
     (out / f"S{subject:02}_source.json").write_text(json.dumps({**source, "subject": subject,
         "threshold_ratio": selected_ratio, "selected_subset": chosen,
+        "threshold_scale_final": scale.tolist(),
+        "threshold_scale_by_cv_held_repetition": {str(r): v.tolist() for r, v in fold_scales.items()},
         "train_windows_50ms": len(x_train), "test_windows_10ms": len(x_test)}, indent=2))
     print(f"S{subject:02}: train {len(x_train)}, test {len(x_test)}, "
           f"TD4 {test_rows[14]['test_accuracy']:.4f}, chosen {chosen:04b}", flush=True)
-    return threshold_cv, subset_cv, test_rows
+    return threshold_cv, subset_cv, test_rows, combination_rows
 
 
 def summary(out, subjects):
@@ -282,9 +355,28 @@ def summary(out, subjects):
     aggregate = selected.groupby(["mask", "families"]).agg(mean_subject_test_accuracy=("test_accuracy", "mean"),
         mean_subject_cv_accuracy=("cv_accuracy", "mean"), subjects_selected=("cv_selected", "sum")).reset_index()
     aggregate.sort_values("mean_subject_cv_accuracy", ascending=False).to_csv(out / "feature_combination_summary.csv", index=False)
+    combinations = pd.read_csv(out / "subset_subject_seed_complementarity.csv")
+    count_fields = ["windows", "td_correct", "si_correct", "shared_wrong", "shared_recovered",
+        "si_wrong_td_correct", "si_correct_td_wrong", "recovery_opportunities", "harm_opportunities",
+        "td_correct_on_recovery", "td_correct_on_harm", "switches", "switch_recovered", "switch_harmed",
+        "switch_net_corrected", "si_i_td_oracle_correct"]
+    rows = []
+    for (mask, families), group in combinations.groupby(["mask", "families"]):
+        row = dict(mask=int(mask), families=families,
+                   **{field: int(group[field].sum()) for field in count_fields})
+        row.update(mean_subject_td_accuracy=float(group.td_accuracy.mean()),
+            mean_subject_si_accuracy=float(group.si_accuracy.mean()),
+            mean_subject_switch_accuracy=float(group.switch_accuracy.mean()),
+            pooled_td_accuracy=row["td_correct"] / row["windows"],
+            pooled_switch_accuracy=(row["si_correct"] + row["switch_net_corrected"]) / row["windows"],
+            shared_recovery_pct=100 * row["shared_recovered"] / max(row["shared_wrong"], 1),
+            pooled_si_i_td_oracle_accuracy=row["si_i_td_oracle_correct"] / row["windows"])
+        rows.append(row)
+    pd.DataFrame(rows).to_csv(out / "subset_complementarity_summary.csv", index=False)
     completion = dict(success=True, subjects=subjects, seeds=[42, 43, 44],
         test_window_seed_evaluations=expected, neural_fits=0,
         lda_final_fits=15 * len(subjects), lda_cv_fits=(3 + 15) * 4 * len(subjects),
+        exact_seed_window_coverage_verified=True, cv_threshold_scale_fitting_repetitions_only=True,
         protocol="DB7-016 200ms/10ms test; 50ms TD4 training grid; repetition-grouped train-only fourfold selection")
     (out / "completion.json").write_text(json.dumps(completion, indent=2))
     return completion
@@ -312,17 +404,21 @@ def main():
                   train_step_samples=TRAIN_STEP, test_step_samples=TEST_STEP,
                   feature_families=FAMILIES, threshold_ratios=THRESHOLD_RATIOS,
                   lda_covariance_shrinkage=0.1,
+                  cv_threshold_scale="95th percentile fitted separately on three fitting repetitions",
+                  final_threshold_scale="95th percentile fitted on repetitions 1/3/4/6",
                   testing_note="Existing inspected DB7-016 test split; exploratory, no independent confirmation")
     (args.out / "PROTOCOL.json").write_text(json.dumps(source, indent=2))
-    threshold_rows, cv_rows, test_rows = [], [], []
+    threshold_rows, cv_rows, test_rows, combination_rows = [], [], [], []
     for s in args.subjects:
-        a, b, c = subject_study(root, s, trace, args.out)
+        a, b, c, d = subject_study(root, s, trace, args.out)
         threshold_rows.extend(a)
         cv_rows.extend(b)
         test_rows.extend(c)
+        combination_rows.extend(d)
         pd.DataFrame(threshold_rows).to_csv(args.out / "threshold_cv.csv", index=False)
         pd.DataFrame(cv_rows).to_csv(args.out / "subset_cv.csv", index=False)
         pd.DataFrame(test_rows).to_csv(args.out / "subset_test_metrics.csv", index=False)
+        pd.DataFrame(combination_rows).to_csv(args.out / "subset_subject_seed_complementarity.csv", index=False)
     print(json.dumps(summary(args.out, args.subjects), indent=2), flush=True)
 
 

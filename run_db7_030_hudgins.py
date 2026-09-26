@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import time
 import zipfile
+from scripts.db7_030_inputs import find_verified_trace
 
 root = Path(__file__).resolve().parent
 out = root / "db7_030_action_results"
@@ -72,6 +73,20 @@ else:
         if time.monotonic() > dataset_deadline:
             raise TimeoutError("Trace dataset is still processing; retry with KAGGLE_EXISTING_DATASET_REF")
         time.sleep(30)
+    # Read the actual mounted-data payload before spending a Kaggle session.
+    dataset_check = stage / "dataset_preflight"
+    dataset_check.mkdir(parents=True, exist_ok=True)
+    code, message = call(["datasets", "files", dataset_ref])
+    if code:
+        raise RuntimeError("Unable to list the ready trace dataset")
+    code, message = call(["datasets", "download", "-d", dataset_ref,
+                          "-p", str(dataset_check), "--unzip", "-q"], timeout=1800)
+    if code:
+        raise RuntimeError("Unable to download the ready trace dataset for preflight")
+    verified_trace = find_verified_trace(dataset_check, manifest["trace_content_sha256"])
+    (out / "dataset_preflight.json").write_text(json.dumps({
+        "dataset": dataset_ref, "verified_file": str(verified_trace),
+        "trace_content_sha256": manifest["trace_content_sha256"], "success": True}, indent=2))
     kernel = stage / "kernel"
     kernel.mkdir(parents=True, exist_ok=True)
     shutil.copy2(notebook, kernel / "experiment.ipynb")
@@ -120,10 +135,13 @@ with zipfile.ZipFile(archives[0]) as archive:
     completion = json.loads(archive.read("completion.json"))
     if (not completion["success"] or completion["subjects"] != list(range(1, 21))
         or completion["test_window_seed_evaluations"] != 695163
-        or completion["neural_fits"] != 0):
+        or completion["neural_fits"] != 0
+        or not completion.get("exact_seed_window_coverage_verified")
+        or not completion.get("cv_threshold_scale_fitting_repetitions_only")):
         raise RuntimeError("Result completion check failed")
     for name in ("REPORT.md", "complementarity_summary.csv", "candidate_preference_diagnostic.csv", "feature_combination_summary.csv",
-                 "subject_seed_complementarity.csv", "subject_gesture_complementarity.csv"):
+                 "subject_seed_complementarity.csv", "subject_gesture_complementarity.csv",
+                 "subset_complementarity_summary.csv", "subset_subject_seed_complementarity.csv"):
         target = out / "summary" / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(archive.read(name))
