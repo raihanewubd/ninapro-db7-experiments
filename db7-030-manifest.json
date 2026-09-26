@@ -25,7 +25,7 @@
   "raw_dataset": "rayaanraza1/ninapro-db7",
   "trace_rows": 695163,
   "trace_sha256": "fdcba628e089936358ff1ada4448612f31c0ce64aac411d111b45e0b945ad626",
-  "notebook_sha256": "8bd932a25010f4385ff1002d35fe06d4db48aefc37fd68d388efef19af9eecaf",
+  "notebook_sha256": "1da5031c53753045aab2630c4791d2fef8127a020c8c2d3b28d67b87eab771ae",
   "source_sha256": "32a50260147a5935db3bda361bebf3bec54d9db84155bf1e23f765ae50d48dc0",
   "neural_fits": 0,
   "test_repetitions": [

@@ -84,7 +84,8 @@ notebook = {"cells": cells, "metadata": {"kernelspec": {
     "display_name": "Python 3", "language": "python", "name": "python3"}},
     "nbformat": 4, "nbformat_minor": 5}
 path = root / "db7-030-hudgins-td4.ipynb"
-path.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
+with path.open("w", encoding="utf-8", newline="\n") as file:
+    file.write(json.dumps(notebook, indent=1))
 manifest = {"experiment_id": "DB7-030", "subjects": list(range(1, 21)),
     "raw_dataset": "rayaanraza1/ninapro-db7",
     "trace_rows": 695163,
