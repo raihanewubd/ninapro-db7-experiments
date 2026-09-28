@@ -1,0 +1,42 @@
+name: DB7-031 train 48-feature hierarchical BRB
+on:
+  workflow_dispatch:
+    inputs:
+      monitor_ref:
+        description: Existing Kaggle kernel to monitor; blank submits a new run
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: db7-031-brb
+  cancel-in-progress: false
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install runner dependencies
+        run: |
+          python -m pip install kaggle==2.2.4 numpy pandas scipy
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Verify ER gradients and trainable weight groups
+        run: python scripts/db7_031_brb.py --self-test
+      - name: Submit dual GPU Kaggle BRB and verify results
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN_SECONDARY }}
+          KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME_SECONDARY }}
+          KAGGLE_MONITOR_REF: ${{ inputs.monitor_ref }}
+        run: python run_db7_031_brb.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: db7-031-results-${{ github.run_id }}
+          path: db7_031_action_results/
+          retention-days: 30
+          compression-level: 0

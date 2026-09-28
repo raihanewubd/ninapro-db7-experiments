@@ -1,0 +1,48 @@
+{
+  "experiment_id": "DB7-031",
+  "notebook": "db7-031-hudgins-hierarchical-brb.ipynb",
+  "notebook_sha256": "a17e8d82ba9bbc4703f28c12c9202da8d03602ba8c7021908a8a4e3fc03a6270",
+  "source_sha256": "cbd85bb881cfdbe947a9fa5b6a0a93e5433defeef4e3ce455ff645c029b1a6ef",
+  "parent_sha256": "f9a8269968f9e5598c232610906773e7938278078580166b8c2abc339c96c092",
+  "raw_dataset": "rayaanraza1/ninapro-db7",
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "features": 48,
+  "references_per_feature": 3,
+  "rules_per_channel": 81,
+  "modules": 12,
+  "trained_parameters": [
+    "consequent beliefs",
+    "rule weights",
+    "attribute weights",
+    "fusion weights"
+  ],
+  "validation_fits": 240,
+  "final_fits": 60,
+  "gpus_required": 2
+}
