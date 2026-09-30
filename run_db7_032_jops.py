@@ -60,6 +60,54 @@ def verify_source_package(manifest: dict) -> Path:
     return notebook
 
 
+def verify_result_archive(path: Path, manifest: dict) -> dict:
+    """The actual archive, not the CLI exit code, determines download success."""
+    with zipfile.ZipFile(path) as archive:
+        assert archive.testzip() is None, 'Output ZIP failed CRC verification.'
+        done = json.loads(archive.read('completion.json'))
+        assert done['success'] and done['experiment_id'] == 'DB7-032'
+        assert done['subjects'] == list(range(1, 21)) and done['seeds'] == [42, 43, 44]
+        assert done['final_brb_fits'] == 60 and done['validation_brb_fits'] == 1200
+        assert done['structure_candidates'] == 300
+        assert done['test_window_seed_evaluations'] == 695163
+        assert done['devices_used'] == ['cuda:0', 'cuda:1']
+        assert done['all_parameter_groups_searched'] and not done['test_used_for_selection']
+        assert isinstance(done['all_parameter_groups_updated'], bool)
+        sources = json.loads(archive.read('source_hashes.json'))
+        for name in ('db7_030_hudgins.py', 'db7_031_brb.py', 'db7_032_jops_engine.py', 'db7_032_jops.py'):
+            assert sources[name] == manifest['source_files_sha256']['scripts/' + name], name
+        for name in ('summary.json', 'REPORT.md', 'subject_seed_metrics.csv',
+                     'subject_gesture_metrics.csv', 'subject_accuracy.png', 'gesture_recall.png'):
+            assert archive.getinfo(name).file_size > 0, name
+        return done
+
+
+def download_results(reference: str, manifest: dict) -> Path:
+    """Accept a verified ZIP even if optional Kaggle API work returns HTTP429."""
+    destination = OUT / 'kaggle'
+    destination.mkdir(exist_ok=True)
+    for attempt in range(4):
+        code, message = call(['kernels', 'output', reference, '-p', str(destination),
+                              '--file-pattern', r'^db7_032_results\.zip$', '--force'])
+        archives = list(destination.rglob('db7_032_results.zip'))
+        if len(archives) == 1:
+            try:
+                verify_result_archive(archives[0], manifest)
+            except (AssertionError, KeyError, ValueError, OSError, zipfile.BadZipFile) as exc:
+                print('Result archive not yet valid:', type(exc).__name__, str(exc), flush=True)
+            else:
+                if code:
+                    print('Kaggle CLI reported an error, but the complete archive passed CRC, '
+                          'source identity and experiment completion checks.', flush=True)
+                save_json(OUT / 'download_verification.json', {
+                    'archive_verified': True, 'cli_exit_code': code, 'attempt': attempt + 1,
+                    'rate_limit_reported': '429' in message, 'kernel': reference})
+                return archives[0]
+        if attempt < 3:
+            time.sleep(60)
+    raise RuntimeError('No verified complete result archive. Resume monitoring this kernel; do not retrain.')
+
+
 def main() -> None:
     OUT.mkdir(exist_ok=True)
     manifest = json.loads((ROOT / "db7-032-manifest.json").read_text(encoding="utf-8"))
@@ -123,14 +171,8 @@ def main() -> None:
             raise TimeoutError("Kaggle may still be running. Use monitor_ref instead of submitting again.")
         time.sleep(60)
 
-    code, _ = read_with_retry([
-        "kernels", "output", reference, "-p", str(OUT / "kaggle"),
-        "--file-pattern", r".*(db7_032_results\.zip|\.log)$",
-    ])
-    assert code == 0, "Output download failed; resume monitoring the completed kernel."
-    archives = list((OUT / "kaggle").rglob("db7_032_results.zip"))
-    assert len(archives) == 1
-    with zipfile.ZipFile(archives[0]) as archive:
+    result_archive = download_results(reference, manifest)
+    with zipfile.ZipFile(result_archive) as archive:
         assert archive.testzip() is None, "Output ZIP failed CRC verification."
         done = json.loads(archive.read("completion.json"))
         assert done["success"]
@@ -153,7 +195,7 @@ def main() -> None:
             (summary / name).write_bytes(archive.read(name))
     save_json(OUT / "verification.json", {
         "completion": done, "kernel": reference,
-        "result_zip_sha256": hashlib.sha256(archives[0].read_bytes()).hexdigest(),
+        "result_zip_sha256": hashlib.sha256(result_archive.read_bytes()).hexdigest(),
         "notebook_sha256": manifest["notebook_sha256"],
     })
     launch["state"] = "verified_complete"
