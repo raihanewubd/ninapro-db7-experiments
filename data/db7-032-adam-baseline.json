@@ -1,0 +1,7 @@
+{
+  "source_experiment": "DB7-031",
+  "run_id": 36421407246,
+  "notebook_sha256": "a17e8d82ba9bbc4703f28c12c9202da8d03602ba8c7021908a8a4e3fc03a6270",
+  "metrics_source_sha256": "de22b3866e59d04d7215ac89c4a9e68ae755ad7cdc360e0dc8897951f181d56e",
+  "role": "Historical matched-data Adam baseline for reporting only; never structure or parameter selection"
+}

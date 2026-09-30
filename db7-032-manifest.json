@@ -1,0 +1,71 @@
+{
+  "experiment_id": "DB7-032",
+  "method": "budgeted hierarchical JOPS-inspired classification adaptation",
+  "notebook": "db7-032-jops-hierarchical-brb.ipynb",
+  "notebook_sha256": "11f85d0670bb47b19f9110230e02e006f2fb1059d0cb407f1787edabdfd345b7",
+  "source_files_sha256": {
+    "scripts/db7_030_hudgins.py": "d955d922affdc69284c1cd2c800b0731f64a60ea8fbb276aeafd09402d5f9223",
+    "scripts/db7_031_brb.py": "cbd85bb881cfdbe947a9fa5b6a0a93e5433defeef4e3ce455ff645c029b1a6ef",
+    "scripts/db7_032_jops_engine.py": "c60a005c5b9738e3360b41697c540bf0541ac6df9951ce682c3a8449ab1fdbb2",
+    "scripts/db7_032_jops.py": "62495b5fb92d0c35d04371d2c93594f34e9ce375ddc9d75594c094e152eb71a8",
+    "data/db7-031-parent.json": "f9a8269968f9e5598c232610906773e7938278078580166b8c2abc339c96c092",
+    "data/db7-032-adam-baseline.csv": "0d5aaa2dfce94efd694f29511d7c92e9d3dc3bd84f020a5c326c70d20dcd822d",
+    "data/db7-032-adam-baseline.json": "37b6a109b1dd45cc1903762fb2e988dbc69b6d1b5d0d984f5cc055178a5e2b53"
+  },
+  "raw_dataset": "rayaanraza1/ninapro-db7",
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "features": 48,
+  "modules": 12,
+  "reference_count_range": [
+    2,
+    4
+  ],
+  "structure_candidates_per_subject_seed": 5,
+  "structure_candidates": 300,
+  "de_population": 12,
+  "de_generations_per_block": 4,
+  "de_cycles": 2,
+  "de_mutation": 0.5,
+  "de_crossover": 0.9,
+  "fitness_sample_batch": 2048,
+  "fitness_population_chunk": 4,
+  "runtime_guard_forecast_hours": 9,
+  "trained_parameters": [
+    "internal reference positions",
+    "rule weights",
+    "attribute weights",
+    "consequent beliefs",
+    "fusion weights"
+  ],
+  "validation_fits": 1200,
+  "final_fits": 60,
+  "expected_test_window_seed_evaluations": 695163,
+  "gpus_required": 2,
+  "test_used_for_selection": false
+}
